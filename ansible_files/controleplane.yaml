@@ -1,0 +1,27 @@
+- hosts: controlplane
+  become: true #to become a root user
+  tasks:
+    - name: inicializando o cluster #Nome do task a ser realizada
+      shell: kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=NumCPU,Mem >> cluster_initialized.txt #O módulo shell Ansible é um módulo prático que permite executar comandos diretamente no shell de destinos remotos, exatamente como você faria se estivesse logado. Ao fazer isso, ele ajuda a manter a originalidade da execução do comando.
+      args: #Os argumentos permitem que você passe valores de configuração para o módulo shell enquanto ele é executado.
+        chdir: $HOME #Altera o diretório atual antes da execução.
+    
+    - name: criando .kube
+      become_user: ubuntu
+      file: #O módulo de arquivo Ansible é usado para criar e excluir o arquivo ou vários arquivos no servidor remoto. Você também pode criar e excluir os diretórios e alterar as permissões dos dados.
+        path: $HOME/.kube #Menciona o caminho do arquivo no servidor remoto.
+        state: directory #Ele menciona o toque e o toque criará um arquivo exatamente como o comando do Linux.
+        mode: 0755 #Permissoes do arquivo
+    
+    - name: copiando config
+      copy: #O módulo de cópia executa uma cópia simples no arquivo ou diretório na máquina local ou remota.
+        src: /etc/kubernetes/admin.conf #src: caminho do arquivo de origem na máquina local onde o playbook ou comando ad-hoc é invocado (pode definir ansible para procurar o arquivo no servidor remoto usando remote_src também)
+        dest: /home/ubuntu/.kube/config #caminho de destino no servidor/host remoto para onde o arquivo deve ser copiado
+        remote_src: yes
+        owner: ubuntu #Nome de usuário do usuário que será o proprietário do arquivo e diretório criados
+  #os comandos abaixo já foram explicados anteriormente
+    - name: habilitando plugin CNI
+      become_user: ubuntu
+      shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml >> pod_network_setup.txt
+      args:
+        chdir: $HOME

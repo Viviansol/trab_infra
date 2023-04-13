@@ -1,0 +1,12 @@
+[controlplane] # define um grupo de hosts contendo apenas um host com endereço IP 10.0.0.211 e o nome controlplane.
+controlplane ansible_host=10.0.0.211 new_hostname=controlplane
+
+[workers] #[workers] define um grupo de hosts contendo dois hosts com endereços IP 10.0.0.88 e 10.0.0.201, com os nomes worker1 e worker2, respectivamente.
+worker1 ansible_host=10.0.0.88 new_hostname=worker01
+worker2 ansible_host=10.0.0.201 new_hostname=worker02
+
+
+
+[all:vars] #[all:vars] define variáveis globais para todos os hosts, que neste caso define a variável ansible_ssh_common_args com o valor -o StrictHostKeyChecking=accept-new, que diz ao Ansible para aceitar automaticamente a chave de host de um novo host ao fazer conexão SSH.
+ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new'
+

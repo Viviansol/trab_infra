@@ -1,0 +1,78 @@
+- hosts: all
+  become: true #"become: true": indica que a execução dos comandos deve ser feita com privilégios de superusuário (root).
+  tasks: #"tasks": contém uma lista de tarefas que serão executadas no host.
+  - name: qualquer coisa pra dizer qual eh a tafera que esta sendo executada, agora sera o alterar nome
+    hostname: #hostname": altera o nome do host para o valor especificado na variável "new_hostname".
+      name: '{{ new_hostname }}'
+  
+  - name: adicionar GPG do docker
+    apt_key: #"apt_key": adiciona a chave GPG do repositório do Docker para garantir a autenticidade dos pacotes baixados.
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: adicionar repo do docker
+    apt_repository:  #"apt_repository": adiciona o repositório do Docker aos repositórios do sistema operacional.
+      repo: deb https://download.docker.com/linux/ubuntu bionic stable
+      state: present
+
+  - name: instalar o docker
+    apt: #"apt": instala os pacotes do Docker especificados no loop.
+      name: "{{ item }}"
+      state: latest
+      update_cache: yes
+    loop:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+
+  - name: criando diretorio da config do docker
+    file: path=/etc/docker state=directory #file": cria o diretório /etc/docker.
+
+  - name: alterando driver do docker
+    copy: #"copy": cria um arquivo de configuração do Docker que define o driver cgroup como "systemd".
+      dest: "/etc/docker/daemon.json"
+      content: | 
+        {
+        "exec-opts": ["native.cgroupdriver=systemd"]
+        }
+
+  - name: adicionar User no grupode Docker
+    user: #"user": adiciona o usuário "ubuntu" ao grupo "docker".
+      name: ubuntu
+      group: docker
+
+  - name: adicionar APT Transport HTTPS
+    apt: #"apt": instala o pacote "apt-transport-https" para garantir a comunicação segura com os repositórios.
+      name: apt-transport-https
+      state: present
+
+  - name: adicionar GPG do k8s
+    apt_key: #"apt_key": adiciona a chave GPG do repositório do Kubernetes.
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: adicionar repo do k8s
+    apt_repository: #"apt_repository": adiciona o repositório do Kubernetes aos repositórios do sistema operacional.
+      repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+
+  - name: instalando o kubelet
+    apt: #"apt": instala o pacote "kubelet" com a versão 1.22.4-00.
+      name: kubelet=1.22.4-00
+      state: present
+      update_cache: true
+
+  - name: instalando o kubeadm
+    apt: #"apt": instala o pacote "kubeadm" com a versão 1.22.4-00.
+      name: kubeadm=1.22.4-00
+      state: present
+      update_cache: true
+
+- hosts: controlplane
+  become: true #"become: true": indica que a execução dos comandos deve ser feita com privilégios de superusuário (root).
+  tasks: #"tasks": contém uma lista de tarefas que serão executadas no host.
+  - name: instalando o kubectl
+    apt: #"apt": instala o pacote "kubectl" com a versão 1.22.4-00. O parâmetro "force" é utilizado para forçar a instalação, caso o pacote já esteja instalado.
+      name: kubectl=1.22.4-00
+      state: present
+      force: true

@@ -1,0 +1,28 @@
+- hosts: controlplane
+  become: true
+  tasks:
+    - name: criando token para entrar no cluster #"criando token para entrar no cluster": essa tarefa cria um token que será usado por outros nós para se juntar ao cluster. Ele usa o comando "kubeadm token create --print-join-command" para criar o token e armazena a saída em "join_command_raw"
+      shell: kubeadm token create --print-join-command
+      register: join_command_raw
+
+    - debug: #"debug": essa tarefa usa o módulo "debug" para imprimir a saída do comando "join_command_raw" no terminal.
+        msg: "{{ join_command_raw.stdout }}"
+
+    - name: adicionando join command #"adicionando join command": essa tarefa usa o módulo "set_fact" para definir uma nova variável "join_command" que contém o comando de junção necessário para outros nós se juntarem ao cluster. Ele usa a primeira linha da saída do comando "join_command_raw" armazenada em "join_command_raw.stdout_lines[0]".
+      set_fact:
+        join_command: "{{ join_command_raw.stdout_lines[0] }}"
+
+- hosts: workers
+  become: true
+  tasks:
+    - name: retirar o swap #retirar o swap": essa tarefa desativa o swap nos nós do worker.
+      shell: "swapoff -a"
+
+    - name: join cluster #"join cluster": essa tarefa usa o comando "sudo {{ hostvars['controlplane'].join_command }} --ignore-preflight-errors all >> node_joined.txt" para adicionar um novo nó ao cluster. Ele usa a variável "join_command" definida na seção anterior para obter o comando necessário para se juntar ao cluster. A saída desse comando é armazenada em "join_worker".
+      shell: "sudo {{ hostvars['controlplane'].join_command }} --ignore-preflight-errors all >> node_joined.txt"
+      args:
+        chdir: $HOME
+      register: join_worker
+    
+    - debug: #"debug": essa tarefa usa o módulo "debug" para imprimir a saída do comando "join_worker" no terminal.
+        msg: "{{ join_worker }}"
